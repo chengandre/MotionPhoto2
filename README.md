@@ -1,105 +1,143 @@
-# MotionPhoto2
+# motionphoto-cli
 
-A small script to create Motion Photo v2/v3 from HEIC or JPG files and videos. Resulting files appear to be compatible with Google Photos and Samsung Gallery as a motion/live photo.
+motionphoto-cli combines a still image and its companion video into one Google/Samsung Motion Photo. It can process an individual image/video pair or scan a directory, using EXIF metadata to match files when filenames are unreliable.
 
-In case the source is an iPhone Live Photo, the presentation timestamp will be migrated as well, thus the photo will start from the same keyframe.
+This repository is a command-line derivative of the original [MotionPhoto2 project](https://github.com/PetrVys/MotionPhoto2). The original graphical workflow did not fit the headless homeserver automation where this tool is used, so this version removes the Gooey interface and its dependencies. It is intended to run from a terminal, shell script, cron job, container, or server without a desktop environment.
 
-Photos are created to mimic the way Galaxy S23 Ultra and Tab S9 phones create HEIC and JPG motion photos. This format internally refers to itself as mpv2 (and recently also mpv3), thus the name of this script.
+## Why this version exists
+
+Immich stores the still image and companion video as separate files. In the homeserver backup workflow, those files are merged into Motion Photos before the results are synchronized to a Google Pixel and uploaded to Google Photos as an additional backup copy.
+
+The converter itself is independent of Immich, Syncthing, and Google Photos. It can process any compatible image/video directory. The homeserver workflow is documented separately in the [TS VM guide](<HOMELAB_REPOSITORY_URL>/ts_vm/README.md).
+
+Compared with the original GUI-oriented workflow, this version provides:
+
+- Command-line usage without Gooey.
+- Fewer Python dependencies.
+- A smaller Linux release binary.
+- Directory processing suitable for scheduled jobs.
+- EXIF-based pairing when filenames do not match.
+- Separate output directories so the source library remains unchanged.
+- Copying of files that are not part of a motion-photo pair.
 
 ## Installation
 
-### Windows
+### Release binary
 
-Please install ExifTool so that it is added to your path. The easiest is to use [installer by Oliver Betz](https://oliverbetz.de/pages/Artikel/ExifTool-for-Windows). Use the file "ExifTool_install_nn.nn_64.exe" and accept all defaults.
+The release binary is the simplest option for a supported platform.
 
-Then download the Windows release and enjoy!
+1. Download the release archive for your platform.
+2. Extract it.
+3. On Unix-like systems, make the executable runnable:
 
-### Unix and MacOS
+   ```sh
+   chmod +x motionphoto2
+   ```
 
-The script requires [ExifTool](https://exiftool.org/) on your computer. Once you have exiftool installed, download the respective release for your OS and extract the binary file from the zip archive.
+4. Confirm that the command-line interface starts:
 
-Open the terminal and navigate to the directory where the file is extracted. Then make sure the file is executable by running the command in the terminal:
+   ```sh
+   ./motionphoto2 --help
+   ```
 
+The Linux binary is built against an earlier glibc version so it can run on older systems such as Debian 12.
+
+ExifTool is required by motionphoto-cli and must be installed separately and available on `PATH`. See the [ExifTool installation instructions](https://exiftool.org/install.html), or follow the [homelab ExifTool setup](<HOMELAB_REPOSITORY_URL>/ts_vm/README.md#541-install-the-pipeline-dependencies).
+
+### Python environment
+
+The source workflow is documented and tested with Python 3.11.
+
+```sh
+python3.11 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python motionphoto2.py --help
 ```
-chmod +x motionphoto2
-```
 
-You may now run the binary either by _double-clicking_ on it from your file explorer or typing the following in the terminal:
-
-```
-./motionphoto2
-```
-
-### Running from python interpreter directly
-
-If you have both exiftool and python 3.7+ installed, the script works just by calling motionphoto2.py (with parameters if required). Please install prerequisities using `pip install -r requirements.txt`
+The command-line source version does not require Gooey. Keep ExifTool installed separately and available on `PATH`.
 
 ## Usage
 
-Run the script from a terminal with the command-line options described below.
+### Process a directory
 
-### Individual photos
+This example scans a directory, pairs files using EXIF metadata, writes Motion Photos to a separate directory, and copies files that were not muxed:
 
-To convert an image and video pair to a Motion Photo v2, run:
-
-```
-motionphoto2 --input-image ImageFile.HEIC --input-video VideoFile.MP4
-```
-
-### Directory mode
-
-The script will match image and video files automatically by filenames when run from commandline. Only direct match (e.g. `IMG_1234.HEIC` and `IMG_1234.MOV`)
-
-```
-motionphoto2 --input-directory /your/directory
+```sh
+./motionphoto2 \
+  --input-directory /srv/photos/input \
+  --output-directory /srv/photos/motionphoto-staging \
+  --exif-match \
+  --copy-unmuxed
 ```
 
-If you add the `--exif-match` option, the script will automatically match image and video files in the specified directory using EXIF metadata. 
-This ensures accurate pairing for sources from iPhone Live Photos, even if filenames differ. For example, it can correctly match `IMG_1234.HEIC` with `IMG_1234(2).MOV` and ignore the seemingly correct match `IMG_1234.HEIC` + `IMG_1234.MOV`. (Very useful for [Google Takeout](https://takeout.google.com/settings/takeout/custom/photos) or [iCloud Photos Downloader](https://github.com/icloud-photos-downloader/icloud_photos_downloader))
+With the Python source checkout, replace `./motionphoto2` with:
 
+```sh
+.venv/bin/python motionphoto2.py \
+  --input-directory /srv/photos/input \
+  --output-directory /srv/photos/motionphoto-staging \
+  --exif-match \
+  --copy-unmuxed
 ```
-motionphoto2 --input-directory /your/directory --exif-match
+
+Use `--recursive` to process subdirectories. With `--exif-match`, image/video pairing uses Live Photo metadata instead of relying only on filenames. Use `--incremental-mode` when repeating scans and you want to skip photos already present in the output directory.
+
+### Process an individual pair
+
+```sh
+./motionphoto2 \
+  --input-image ImageFile.HEIC \
+  --input-video VideoFile.MP4 \
+  --output-file MotionPhoto.HEIC
 ```
 
-### Notes
+### Use it from a scheduled script
 
-- The output of new image files will be: original_name.**LIVE**.ext (unless overridden).
-- If you want to process recursively all subdirectories, use: `--recursive`.
-- If you provide an `--output-directory`, the file will be saved as: **output-directory**/original_name.ext.
-- While the script muxes the image and video, two temp files will be created and deleted automatically; keep them with `--keep-temp`.
-- To replace the original image file with the live one, use: `--overwrite` (use at your risk).
-- To remove the video file after muxing, use: `--delete-video` (use at your risk).
-- To use EXIF matching instead of filename matching, use: `--exif-match`
-- To copy files other than live/motion photo muxing during directory processing, use: `--copy-unmuxed`
-- To skip muxing if destination is already a motion photo use: `--incremental-mode` (Useful for performing incremental photo library updates)
+```sh
+#!/bin/sh
+set -eu
+
+cd /opt/motionphoto-cli
+./motionphoto2 \
+  --input-directory /srv/photos/input \
+  --output-directory /srv/photos/motionphoto-staging \
+  --exif-match \
+  --copy-unmuxed \
+  --incremental-mode
+```
+
+The script can then be called by cron or another timer service. Keep synchronization and backup actions as separate steps so that conversion and transfer can be checked independently.
+
+### Options
+
+- `--input-directory DIR` — process photos and videos in a directory.
+- `--output-directory DIR` — save results to a separate directory.
+- `--recursive` — process subdirectories recursively.
+- `--exif-match` — match image/video pairs using Live Photo metadata.
+- `--copy-unmuxed` — copy files that are not part of a muxed pair.
+- `--incremental-mode` — skip photos already muxed in the output.
+- `--no-xmp` — skip XMP processing and use the supported non-XMP motion-photo path.
+- `--overwrite` — replace the original image; use with care.
+- `--delete-video` — delete the source video after muxing; use with care.
+- `--keep-temp` — keep temporary muxing files.
+
+Run `./motionphoto2 --help` for the complete option list.
 
 ## Limitations
 
-HDR in Google Photos works only for HEIC photos with HDR stored in ISO/CD 21496-1 format for now. That effectively means your HEIC photos have to be shot by iPhone 15+ with iOS18+ in order to be recognized by Google Photos as HDR.
+This version does not provide the original graphical interface. It is intended for command-line and automated workflows.
 
-If the source image is not shot by iPhone 15+ on iOS18+ to HEIC, Google Photos will say that the resulting photo is not HDR. This is not true - if you save the photo back to iPhone camera roll, you'll see the photo is HDR. Google Photos _will_ actually show it too, but only when it is stored in local photos on an iPhone/iPad.
+Motion Photo compatibility depends on the input image, companion video, metadata, and the receiving application. Test representative files before processing a large library. Google Photos applies its own compatibility and HDR processing rules.
 
-The reason is probably directly related to Motion Photos - the same place where Motion Photos are defined (in XMP object GCamera - `http://ns.google.com/photos/1.0/camera/`) is also the place where Google/Android stores JPEG/R HDR information.
+## Credits and license
 
-It appears that the server-side processing of Google Photos does not check for Apple HDR or ISO HDR once it finds Google Camera header in XMP tags. For JPG files, a conversion is possible by adjusting metadata and is on the roadmap. For HDR HEIF files, a conversion is also theoretically possible (all that's needed is to convert Apple HDR metadata into ISO tmap metadata), but it will be very nontrivial to implement.
+This project is derived from [Petr Vyskocil's MotionPhoto2](https://github.com/PetrVys/MotionPhoto2). The upstream project and its README contain the complete contributor credits and project history.
 
-## Credits
+The original MIT license and copyright notice are retained in [LICENSE](LICENSE):
 
-Huge thanks to [@Tkd-Alex](https://github.com/Tkd-Alex) for porting the original PowerShell script to Python. It is now much faster and easier to adjust to boot.
+```text
+Copyright (c) 2024 Petr Vyskocil
+```
 
-Thanks to [@NightMean](https://github.com/NightMean) for implementing the exif metadata matching.
-Thanks to [@sahilph](https://github.com/sahilph) for copying of non-live photos in dir mode.
-
-Thanks to [@tribut](https://github.com/tribut), [@Tkd-Alex](https://github.com/Tkd-Alex), [@4Urban](https://github.com/4Urban), [@IamRysing](https://github.com/IamRysing) and [@NightMean](https://github.com/NightMean) for providing sample Motion Photo pictures (check them out [here](https://github.com/PetrVys/MotionPhotoSamples))
-
-#### Documentation
-
-Google official documentation of the format
-
-- https://developer.android.com/media/platform/motion-photo-format
-
-Samsung trailer tags are well explained in doodspav's repo
-
-- https://github.com/doodspav/motionphoto
-
-HEIC muxing is similar to doodspav's work, but additionally uses MP4 top-level boxes "mpvd" and "sefd" to add the MP data into heic and mp4 in standard-compliant way (see source in this repo).
+This derivative preserves the upstream license and identifies its command-line and automation-focused changes.
