@@ -26,5 +26,5 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           upx_exclude=[],
-          console=False,
+          console=True,
           windowed=True)
