@@ -21,7 +21,7 @@ jobs:
             CMD_BUILD: pyinstaller build-osx-linux.spec
             CMD_ZIP: zip -r9 MotionPhoto2_macOS_${{ github.ref_name }}.zip motionphoto2
             OUT_FILE_NAME: MotionPhoto2_macOS_${{ github.ref_name }}.zip
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             TARGET: linux
             CMD_BUILD: pyinstaller build-osx-linux.spec
             CMD_ZIP: zip -r9 MotionPhoto2_Linux_${{ github.ref_name }}.zip motionphoto2
