@@ -8,7 +8,7 @@ This repository is a command-line derivative of the original [MotionPhoto2 proje
 
 Immich stores the still image and companion video as separate files. In the homeserver backup workflow, those files are merged into Motion Photos before the results are synchronized to a Google Pixel and uploaded to Google Photos as an additional backup copy.
 
-The converter itself is independent of Immich, Syncthing, and Google Photos. It can process any compatible image/video directory. The homeserver workflow is documented separately in the [TS VM guide](<HOMELAB_REPOSITORY_URL>/ts_vm/README.md).
+The converter itself is independent of Immich, Syncthing, and Google Photos. It can process any compatible image/video directory. The homeserver workflow is documented separately in the [TS VM guide](https://github.com/chengandre/homelab/blob/main/ts_vm/README.md).
 
 Compared with the original GUI-oriented workflow, this version provides:
 
@@ -42,7 +42,7 @@ The release binary is the simplest option for a supported platform.
 
 The Linux binary is built against an earlier glibc version so it can run on older systems such as Debian 12.
 
-ExifTool is required by motionphoto-cli and must be installed separately and available on `PATH`. See the [ExifTool installation instructions](https://exiftool.org/install.html), or follow the [homelab ExifTool setup](<HOMELAB_REPOSITORY_URL>/ts_vm/README.md#541-install-the-pipeline-dependencies).
+ExifTool is required by motionphoto-cli and must be installed separately and available on `PATH`. See the [ExifTool installation instructions](https://exiftool.org/install.html), or follow the [homelab ExifTool setup](https://github.com/chengandre/homelab/blob/main/ts_vm/README.md#541-install-the-pipeline-dependencies).
 
 ### Python environment
 
