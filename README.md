@@ -6,8 +6,6 @@ In case the source is an iPhone Live Photo, the presentation timestamp will be m
 
 Photos are created to mimic the way Galaxy S23 Ultra and Tab S9 phones create HEIC and JPG motion photos. This format internally refers to itself as mpv2 (and recently also mpv3), thus the name of this script.
 
-![GUI Screenshot](documentation/images/GUI.png?raw=true "GUI")
-
 ## Installation
 
 ### Windows
@@ -38,7 +36,7 @@ If you have both exiftool and python 3.7+ installed, the script works just by ca
 
 ## Usage
 
-Just run the script! If you run it without parameters, it'll present a GUI with explanations. Alternatively, you can use it using commandline as per below examples.
+Run the script from a terminal with the command-line options described below.
 
 ### Individual photos
 

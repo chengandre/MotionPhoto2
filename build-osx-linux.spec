@@ -1,8 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-import gooey
-gooey_root = os.path.dirname(gooey.__file__)
-
 block_cipher = None
 
 a = Analysis(['motionphoto2.py'],
@@ -30,5 +27,4 @@ exe = EXE(pyz,
           upx=True,
           upx_exclude=[],
           console=False,
-          windowed=True,
-          icon=os.path.join(gooey_root, 'images', 'program_icon.ico'))
+          windowed=True)

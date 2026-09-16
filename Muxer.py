@@ -202,7 +202,7 @@ class Muxer:
         self.fix_output_fpath(image_metadata)
         self.validate_video(self.video_fpath, metadata=video_metadata)
 
-        if self.no_xmp is False:
+        if not self.no_xmp:
             result = self.exiftool.execute(
                 *[
                     "-X",
@@ -271,7 +271,7 @@ class Muxer:
             binary_file.write(merged_bytes)
         shutil.copystat(self.image_fpath, self.output_fpath)
 
-        if self.delete_temp is True:
+        if self.delete_temp is True and self.no_xmp is False:
             os.remove(xmp_updated)
             self.logger.debug("Delete: %s", xmp_updated)
             os.remove(xmp_image)

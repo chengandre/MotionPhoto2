@@ -12,10 +12,9 @@ import shutil
 import sys
 
 from pathlib import Path
-from gooey import GooeyParser
 
 from Muxer import Muxer
-from utils import is_motion_photo, extract_video_from_image, input_output_binary_compare, load_defaults, save_defaults
+from utils import is_motion_photo, extract_video_from_image, input_output_binary_compare
 
 logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
@@ -25,187 +24,126 @@ logging.basicConfig(
 )
 
 class Unbuffered(object):
-   def __init__(self, stream):
-       self.stream = stream
-   def write(self, data):
-       self.stream.write(data)
-       self.stream.flush()
-   def writelines(self, datas):
-       self.stream.writelines(datas)
-       self.stream.flush()
-   def __getattr__(self, attr):
-       return getattr(self.stream, attr)
+    def __init__(self, stream):
+        self.stream = stream
+    def write(self, data):
+        self.stream.write(data)
+        self.stream.flush()
+    def writelines(self, datas):
+        self.stream.writelines(datas)
+        self.stream.flush()
+    def __getattr__(self, attr):
+        return getattr(self.stream, attr)
 
 def main():
     
-    defaults = load_defaults()
-    
-    parser = GooeyParser(
+    parser = argparse.ArgumentParser(
         prog="MotionPhoto2",
         description="Mux HEIC and JPG Live Photos into Google/Samsung Motion Photos",
     )
     
-    dir_group = parser.add_argument_group(
-        "Process a Directory",
-        gooey_options={'columns':4}
-    )
+    dir_group = parser.add_argument_group("Process a Directory")
 
     dir_group.add_argument(
         "-id", 
         "--input-directory",
-        metavar="Input Directory",
+        metavar="DIR",
         help="Mux all the photos and videos in a directory",
-        widget='DirChooser',
-        gooey_options={'full_width':True, 'initial_value':defaults['input_directory']}
     )
     
     dir_group.add_argument(
         "-r",
         "--recursive",
-        metavar="Recursive",
         action="store_true",
         help="Recursively process subdirectories",
-        gooey_options={'initial_value':defaults['recursive']}
     )
 
     dir_group.add_argument(
         "-em", 
         "--exif-match",
-        metavar="Match by EXIF",
         action="store_true",
         help="Match files by Live Photo metadata",
-        gooey_options={'initial_value':defaults['exif_match']}
     )
 
     dir_group.add_argument(
         "-im",
         "--incremental-mode",
-        metavar="Incremental Mode",
         action="store_true",
         help="Skip photos already muxed in output",
-        gooey_options={'initial_value':defaults['incremental_mode']}
     )
     
     dir_group.add_argument(
         "-cu",
         "--copy-unmuxed",
-        metavar="Copy Unmuxed",
         action="store_true",
         help="Copy other files",
-        gooey_options={'initial_value':defaults['copy_unmuxed']}
     )
 
     dir_group.add_argument(
         "-od",
         "--output-directory",
-        metavar="Output Directory",
+        metavar="DIR",
         help="Directory where to save the resulting Motion Photos",
-        widget='DirChooser',
-        gooey_options={'full_width':True, 'initial_value':defaults['output_directory']}
     )
 
-    settings_group = parser.add_argument_group(
-        "Settings",
-        gooey_options={'columns':4}
-    )
+    settings_group = parser.add_argument_group("Settings")
 
     settings_group.add_argument(
         "-dv",
         "--delete-video",
-        metavar="Delete Video",
         action="store_true",
         help="Delete video after muxing",
-        gooey_options={'initial_value':defaults['delete_video']}
     )
     
     settings_group.add_argument(
         "-o",
         "--overwrite",
-        metavar="Overwrite",
         action="store_true",
         help="Overwrite the original image",
-        gooey_options={'initial_value':defaults['overwrite']}
     )
 
     settings_group.add_argument(
         "-kt",
         "--keep-temp",
-        metavar="Keep Temp",
         action="store_true",
         help="Keep muxing temp files",
-        gooey_options={'initial_value':defaults['keep_temp']}
     )
     
     settings_group.add_argument(
         "-v", 
         "--verbose",
-        metavar="Verbose",
         action="store_true", 
         help="Verbose output",
-        gooey_options={'initial_value':defaults['verbose']}
     )
 
-    file_group = parser.add_argument_group(
-        "Process a Single File"
-    )
+    file_group = parser.add_argument_group("Process a Single File")
 
     file_group.add_argument(
         "-ii",
         "--input-image",
-        metavar="Input Image",
+        metavar="FILE",
         help="Input file image (.heic, .jpg)",
-        widget='FileChooser',
-        gooey_options={
-            'wildcard':
-                "HEIC file|*.heic|"
-                "HEIF file|*.heif|"
-                "JPG file|*.jpg|"
-                "All files (*.*)|*.*",
-            'message': "Select image file",
-            'initial_value':defaults['input_image']
-        }
     )
         
     file_group.add_argument(
         "-iv",
         "--input-video",
-        metavar="Input Video",
+        metavar="FILE",
         help="Input file video (.mov, .mp4)", 
-        widget='FileChooser',
-        gooey_options={
-            'wildcard':
-                "MOV file|*.mov|"
-                "MP4 file|*.mp4|"
-                "All files (*.*)|*.*",
-            'message': "Select video file",
-            'initial_value':defaults['input_video']
-        }
     )
 
     file_group.add_argument(
         "-of", 
         "--output-file",
-        metavar="Output File",
+        metavar="FILE",
         help="Output Live Photo filename",
-        widget='FileSaver',
-        gooey_options={
-            'wildcard':
-                "HEIC file|*.heic|"
-                "HEIF file|*.heif|"
-                "JPG file|*.jpg|"
-                "All files (*.*)|*.*",
-            'message': "Target image file",
-            'initial_value':defaults['output_file']
-        }
     )
 
     file_group.add_argument(
         "-nx",
         "--no-xmp",
-        metavar="No XMP",
         action="store_true",
         help="No XMP processing (just glue image and video using Samsung tags)",
-        gooey_options={'visible':False, 'initial_value':defaults['no_xmp']}
     )
 
     args = parser.parse_args()
@@ -259,25 +197,9 @@ def main():
             sys.exit(1)
         elif args.copy_unmuxed is not None:
             input_directory = f"{Path(args.input_directory).resolve()}"
-            if os.path.samefile(input_directory, output_directory): # Input directory and output directory cannot be same if copying unmuxed files
+            if os.path.samefile(input_directory, output_directory):
                 print("[ERROR] Output directory cannot be the same as input directory")
 
-    defaults['input_directory']=args.input_directory
-    defaults['recursive']=args.recursive
-    defaults['exif_match']=args.exif_match
-    defaults['incremental_mode']=args.incremental_mode
-    defaults['copy_unmuxed']=args.copy_unmuxed
-    defaults['output_directory']=args.output_directory
-    defaults['delete_video']=args.delete_video
-    defaults['overwrite']=args.overwrite
-    defaults['keep_temp']=args.keep_temp
-    defaults['verbose']=args.verbose
-    defaults['input_image']=args.input_image
-    defaults['input_video']=args.input_video
-    defaults['output_file']=args.output_file
-    defaults['no_xmp']=args.no_xmp
-    save_defaults(defaults)
-            
     logger = logging.getLogger("ExifTool")
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
     
@@ -488,7 +410,7 @@ def main():
             if args.copy_unmuxed:
                 print("=" * 25)
                 print("Copying unmuxed files...")
-                for file in itertools.chain(unmatched_images, videos, unsupported):
+                for file in itertools.chain(unmatched_images, videos):
                     # Handle output directory structure
                     output_subdirectory = args.output_directory
                     if output_subdirectory is not None:
@@ -519,17 +441,4 @@ def main():
             ).mux()
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        from gooey import Gooey
-        main = Gooey(program_name='MotionPhoto2',
-                     default_size=(1100, 820),
-                     progress_regex=r"^=+\[(\d+)/(\d+)]$",
-                     progress_expr="x[0] / x[1] * 100",
-                     show_restart_button=False,
-                    )(main)
-    # Gooey reruns the script with this parameter for the actual execution.
-    # Since we don't use decorator to enable commandline use, remove this parameter
-    # and just run the main when in commandline mode.
-    if '--ignore-gooey' in sys.argv:
-        sys.argv.remove('--ignore-gooey')
     main()
